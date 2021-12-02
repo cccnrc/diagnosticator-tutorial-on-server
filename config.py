@@ -21,3 +21,4 @@ class Config(object):
     MESSAGE_PER_PAGE = os.environ.get('MESSAGE_PER_PAGE') or 10
     LOGIN_DISABLED = True if os.environ.get('LOGIN_DISABLED') == "1" else False
     DEVELOPMENT_TESTING = True if os.environ.get('DEVELOPMENT_TESTING') == "1" else False
+    JSON_FOLDER = os.environ.get('JSON_FOLDER') or os.path.join( basedir, 'JSON' )

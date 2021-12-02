@@ -162,7 +162,11 @@
             {% if GENENAME == "" %}
               {% set GENENAME = sampleVar_dict[ var_name ][ 'CHARS' ][ 'SYMBOL' ] %}
             {% endif %}
-              {{ GENENAME }}
+            <a href="{{ url_for('main.gene_page', gene_name = GENENAME) }}">
+              <button class="btn btn-basic" style="border: 1px solid #308eff;">
+                {{ GENENAME }}
+              </button>
+            </a>
           </td>
           <td class="ui-helper-center">
               {{ sampleVar_dict[ var_name ][ 'CHARS' ][ 'HGVSc' ] }}

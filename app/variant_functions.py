@@ -284,14 +284,59 @@ def update_var_dict_known_to_redis( ):
 
 
 
+import json
+import os
 
+def load_json_dict( FILE ):
+    with open( FILE,"r") as f:
+      data = f.read()
+    dict = json.loads(data)
+    return( dict )
 
+def load_VAR_SAMPLE_GENE_json_dict( JSON_FOLDER ):
+    VAR_JSON_FILE = os.path.join( JSON_FOLDER, 'var_dict.json' )
+    SAMPLE_JSON_FILE = os.path.join( JSON_FOLDER, 'sample_dict.json' )
+    GENE_JSON_FILE = os.path.join( JSON_FOLDER, 'gene_dict.json' )
+    variant_dict = load_json_dict( VAR_JSON_FILE )
+    sample_dict = load_json_dict( SAMPLE_JSON_FILE )
+    gene_dict = load_json_dict( GENE_JSON_FILE )
+    return( variant_dict, sample_dict, gene_dict )
 
+def write_json_dict( DICT, KEY ):
+    JSON_FOLDER = current_app.config['JSON_FOLDER']
+    VAR_JSON_FILE = os.path.join( JSON_FOLDER, 'var_dict.json' )
+    SAMPLE_JSON_FILE = os.path.join( JSON_FOLDER, 'sample_dict.json' )
+    GENE_JSON_FILE = os.path.join( JSON_FOLDER, 'gene_dict.json' )
+    if KEY == 'VAR':
+        FILE = VAR_JSON_FILE
+    elif KEY == 'SAMPLE':
+        FILE = SAMPLE_JSON_FILE
+    elif KEY == 'GENE':
+        FILE = GENE_JSON_FILE
+    with open( FILE, 'w') as fp:
+        json.dump(DICT, fp)
+    return( True )
 
-
-
-
-
+def JSON_update_dict_element( key_prefix, key_value, subdict_name, element_name, element_value ):
+    variant_dict, sample_dict, gene_dict = load_VAR_SAMPLE_GENE_json_dict( current_app.config['JSON_FOLDER'] )
+    if key_prefix == 'VAR':
+        DICT = variant_dict
+    elif key_prefix == 'SAMPLE':
+        DICT = sample_dict
+    elif key_prefix == 'GENE':
+        DICT = gene_dict
+    ### check
+    if not key_value in DICT:
+        return( False )
+    if subdict_name in DICT[key_value]:
+        if element_name in DICT[key_value][subdict_name]:
+            DICT[key_value][subdict_name][element_name] = element_value
+        else:
+            DICT[key_value][subdict_name].update({ element_name : element_value })
+    else:
+        DICT[key_value].update({ subdict_name : { element_name : element_value } })
+    write_json_dict( DICT, key_prefix )
+    return( True )
 
 
 

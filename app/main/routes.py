@@ -19,6 +19,7 @@ import requests
 from uuid import getnode as get_mac
 from app.variant_functions import send_local_variants, get_known_variants, get_all_known_variants, get_report_statuses, send_local_var, get_server_new_messages_dict
 from app.main.forms import SearchForm, FilterForm
+import json
 
 
 ######################################################################
@@ -88,11 +89,11 @@ def project():
     '''
     user = User.query.filter_by( server_username = current_user.server_username ).first_or_404()
     form = NewProjectForm(
-        projectID = user.project_name,
-        project_description = user.project_description,
-        project_DX = user.project_diagnosis,
-        project_ICDS10 = user.project_icds_code,
-        project_assembly = user.project_assembly
+        projectID = user.project_name or 'Tutorial Project',
+        project_description = user.project_description or 'Simply a project for this tutorial',
+        project_DX = user.project_diagnosis or 'Tutorial Syndrome',
+        project_ICDS10 = user.project_icds_code or 'F0.0',
+        project_assembly = user.project_assembly or 'hg38'
     )
     if form.validate_on_submit() :
         ### insert project in DB
@@ -339,18 +340,20 @@ def analyzeVCF_ASILO( filename ):
 ##################################################################
 ######################## SAMPLE-specific #########################
 ##################################################################
+from app.variant_functions import load_VAR_SAMPLE_GENE_json_dict
+
 @bp.route('/patient_result', methods=['GET', 'POST'])
 @server_valid_authentication_required
 @login_required
 @project_required
-@project_data_required
+# @project_data_required
 @update_known_variants_redis_DB
 def patient_result():
     '''
         this is the function to display patients results
     '''
-    variant_dict = redis_functions.redis_dict_return( current_app.config['REDIS_URL'], 2,  'var' )
-    sample_dict = redis_functions.redis_dict_return( current_app.config['REDIS_URL'], 2,  'sam' )
+    USER_JSON_FOLDER = os.path.join( current_app.config['JSON_FOLDER'], current_user.server_username )
+    variant_dict, sample_dict, gene_dict = load_VAR_SAMPLE_GENE_json_dict( USER_JSON_FOLDER )
     ### get number of P/LP variants for each sample
     sampleHTMLdict = diagnosticator_rendering_functions.getSamplesHTMLdict( sample_dict, variant_dict  )
     return( render_template('patient_result_DXcator.html',
@@ -363,15 +366,18 @@ def patient_result():
 @project_required
 @login_required
 @server_valid_authentication_required
-@project_data_required
+# @project_data_required
 @update_known_variants_redis_DB
 def patient_page( sample_name ):
     '''
         this is the function to display single patient page
     '''
-    sample_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'sam', key_value = sample_name )
+    USER_JSON_FOLDER = os.path.join( current_app.config['JSON_FOLDER'], current_user.server_username )
+    variant_dict, sample_dict, gene_dict = load_VAR_SAMPLE_GENE_json_dict( USER_JSON_FOLDER )
+    sample_dict = sample_dict[sample_name]
+    # sample_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'sam', key_value = sample_name )
     sample_dict = diagnosticator_rendering_functions.check_status_in_dict( sample_dict )
-    sampleVar_dict = diagnosticator_rendering_functions.getSampleVariants( sample_dict )
+    sampleVar_dict = diagnosticator_rendering_functions.getSampleVariantsJSON( sample_dict, variant_dict )
     sampleVar_dict = diagnosticator_rendering_functions.orderDictByScore( sampleVar_dict )
     return( render_template('patient_page_DXcator.html',
                                 title = sample_name,
@@ -385,13 +391,14 @@ def patient_page( sample_name ):
 @project_required
 @login_required
 @server_valid_authentication_required
-@project_data_required
+# @project_data_required
 @update_known_variants_redis_DB
 def patient_change_status( new_status, sample_name ):
     '''
         this is the function to change status to a patient
     '''
-    diagnosticator_rendering_functions.change_status( url = current_app.config['REDIS_URL'], key_prefix = 'sam', key_value = sample_name, new_status = new_status  )
+    # diagnosticator_rendering_functions.change_status( url = current_app.config['REDIS_URL'], key_prefix = 'sam', key_value = sample_name, new_status = new_status  )
+    JSON_update_dict_element( 'SAMPLE', key_value = sample_name, subdict_name = 'STATUS', element_name = 'status', element_value = new_status  )
     flash( "sample {0} status successfully updated to: {1}".format( sample_name, diagnosticator_rendering_functions.get_classes_dict()[new_status]['description'] ), 'success' )
     return( redirect( url_for( 'main.patient_page', sample_name = sample_name )))
 
@@ -406,7 +413,7 @@ def patient_change_status( new_status, sample_name ):
 ##################################################################
 @bp.route('/search_variant')
 @server_valid_authentication_required
-@project_data_required
+# @project_data_required
 @project_required
 @login_required
 @update_known_variants_redis_DB
@@ -422,14 +429,17 @@ from app.variant_functions import report_local_var
 @server_valid_authentication_required
 @project_required
 @login_required
-@project_data_required
+# @project_data_required
 @update_known_variants_redis_DB
 def variant_page( variant_name ):
     '''
         this is the function to display single variant page
     '''
-    variant_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name )
-    sampleVARstatus_dict = diagnosticator_rendering_functions.get_samples_VAR_status( variant_name = variant_name, variant_dict = variant_dict )
+    # variant_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name )
+    USER_JSON_FOLDER = os.path.join( current_app.config['JSON_FOLDER'], current_user.server_username )
+    variant_dict, sample_dict, gene_dict = load_VAR_SAMPLE_GENE_json_dict( USER_JSON_FOLDER )
+    variant_dict = variant_dict[variant_name]
+    sampleVARstatus_dict = diagnosticator_rendering_functions.get_samples_VAR_status_JSON( variant_name = variant_name, variant_dict = variant_dict, samples_dict = sample_dict )
     variant_dict = diagnosticator_rendering_functions.arrangeVARdict( variant_dict )
     return( render_template('variant_page_DXcator.html',
                                 title = variant_name,
@@ -440,29 +450,23 @@ def variant_page( variant_name ):
 
 
 
-from app.variant_functions import report_local_var
+from app.variant_functions import report_local_var, JSON_update_dict_element
 
 @bp.route('/change_variant_sample_status/<sample_name>/<variant_name>/<new_status>', methods=['GET', 'POST'])
 @project_required
 @login_required
 @server_valid_authentication_required
-@project_data_required
+# @project_data_required
 def change_variant_sample_status( sample_name, variant_name, new_status ):
     '''
         this is the function to update a variant status inside a sample
     '''
     report_statuses = get_report_statuses()
-    try:
-        diagnosticator_rendering_functions.update_sampleVAR_status( variant_name, sample_name, new_status )
-        if new_status in report_statuses:
-            if report_local_var( variant_name, new_status ):
-                flash("successfully updated variant: {0} status to {1}, for sample: {2}".format( variant_name, diagnosticator_rendering_functions.get_classes_dict()[new_status]['description'], sample_name ), 'success' )
-            else:
-                flash("!!! ERROR !!! reporting variant: {0} to server".format( variant_name ), 'danger' )
-                #pass
-    except:
-        pass
-        #flash("!!! ERROR !!! updating variant: {0} status to {1}, for sample: {2}".format( variant_name, new_status, sample_name ), 'danger' )
+    # diagnosticator_rendering_functions.update_sampleVAR_status( variant_name, sample_name, new_status )
+    JSON_update_dict_element( 'SAMPLE', key_value = sample_name, subdict_name = 'STATUS', element_name = variant_name, element_value = new_status  )
+    if new_status in report_statuses:
+        flash("successfully updated variant: {0} status to {1}, for sample: {2}".format( variant_name, diagnosticator_rendering_functions.get_classes_dict()[new_status]['description'], sample_name ), 'success' )
+        flash("this above is the message you will see, nothing is really reported in the tutorial :)", 'warning' )
     return( redirect( url_for( 'main.variant_page', variant_name = variant_name ) ))
 
 
@@ -470,14 +474,16 @@ def change_variant_sample_status( sample_name, variant_name, new_status ):
 @project_required
 @login_required
 @server_valid_authentication_required
-@project_data_required
+# @project_data_required
 def change_variant_sample_status_local( sample_name, variant_name, new_status ):
     '''
         this is the function to update a variant status inside a sample
     '''
     try:
-        diagnosticator_rendering_functions.update_sampleVAR_status( variant_name, sample_name, new_status )
+        JSON_update_dict_element( 'SAMPLE', key_value = sample_name, subdict_name = 'STATUS', element_name = variant_name, element_value = new_status  )
+        # diagnosticator_rendering_functions.update_sampleVAR_status( variant_name, sample_name, new_status )
         flash("successfully updated variant: {0} status to {1}, for sample: {2}".format( variant_name, diagnosticator_rendering_functions.get_classes_dict()[new_status]['description'], sample_name ), 'success' )
+        flash("this above is the message you will see, nothing is really reported in the tutorial :)", 'warning' )
     except:
         pass
     return( redirect( url_for( 'main.variant_page', variant_name = variant_name ) ))
@@ -488,19 +494,22 @@ def change_variant_sample_status_local( sample_name, variant_name, new_status ):
 ######################### ACMG-specific ##########################
 ##################################################################
 @bp.route('/acmg_page/<variant_name>', methods=['GET', 'POST'])
-@project_required
+# @project_required
 @login_required
 @server_valid_authentication_required
-@project_data_required
+# @project_data_required
 @update_known_variants_redis_DB
 def acmg_page( variant_name ):
     '''
         this is the function to display single variant ACMG page
     '''
-    variant_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name )
+    # variant_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name )
+    USER_JSON_FOLDER = os.path.join( current_app.config['JSON_FOLDER'], current_user.server_username )
+    variant_dict, sample_dict, gene_dict = load_VAR_SAMPLE_GENE_json_dict( USER_JSON_FOLDER )
+    variant_dict = variant_dict[variant_name]
     variant_dict = diagnosticator_rendering_functions.arrangeVARdict( variant_dict )
     varACMG = diagnosticator_rendering_functions.calculateACMG( variant_dict['ACMG'] )
-    redis_functions.redis_add_dict_element( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name, subdict_name = 'ACMG', element_name = 'ACMG', element_value = varACMG )
+    # redis_functions.redis_add_dict_element( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name, subdict_name = 'ACMG', element_name = 'ACMG', element_value = varACMG )
     variant_dict[ 'ACMG' ] = diagnosticator_rendering_functions.addACMGkeys( variant_dict['ACMG'] )
     return( render_template('variantACMG_page_DXcator.html',
                                 title = "ACMG: ".format( variant_name ),
@@ -515,15 +524,20 @@ def acmg_page( variant_name ):
 @project_required
 @login_required
 @server_valid_authentication_required
-@project_data_required
+# @project_data_required
 def acmg_criteria_modify( variant_name, criteria, value ):
     '''
         this is the function to display single variant ACMG page
     '''
-    variant_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name )
-    redis_functions.redis_add_dict_element( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name, subdict_name = 'ACMG', element_name = criteria, element_value = value )
+    # variant_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name )
+    USER_JSON_FOLDER = os.path.join( current_app.config['JSON_FOLDER'], current_user.server_username )
+    variant_dict, sample_dict, gene_dict = load_VAR_SAMPLE_GENE_json_dict( USER_JSON_FOLDER )
+    var_dict = variant_dict[variant_name]
+    # redis_functions.redis_add_dict_element( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name, subdict_name = 'ACMG', element_name = criteria, element_value = value )
+    JSON_update_dict_element( key_prefix = 'VAR', key_value = variant_name, subdict_name = 'ACMG', element_name = criteria, element_value = value )
     ### recalculate overall ACMG classification
-    redis_functions.redis_add_dict_element( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name, subdict_name = 'ACMG', element_name = 'ACMG', element_value = diagnosticator_rendering_functions.calculateACMG( variant_dict['ACMG'] ) )
+    # redis_functions.redis_add_dict_element( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var', key_value = variant_name, subdict_name = 'ACMG', element_name = 'ACMG', element_value = diagnosticator_rendering_functions.calculateACMG( variant_dict['ACMG'] ) )
+    JSON_update_dict_element( key_prefix = 'VAR', key_value = variant_name, subdict_name = 'ACMG', element_name = 'ACMG', element_value = diagnosticator_rendering_functions.calculateACMG( var_dict['ACMG'] ) )
     return( redirect( url_for( 'main.acmg_page',variant_name = variant_name ) ))
 
 
@@ -535,13 +549,16 @@ def acmg_criteria_modify( variant_name, criteria, value ):
 @project_required
 @login_required
 @server_valid_authentication_required
-@project_data_required
+# @project_data_required
 @update_known_variants_redis_DB
 def gene_page( gene_name ):
     '''
         this is the function to display single gene variants
     '''
-    gene_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'gen', key_value = gene_name )
+    # gene_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'gen', key_value = gene_name )
+    USER_JSON_FOLDER = os.path.join( current_app.config['JSON_FOLDER'], current_user.server_username )
+    variant_dict, sample_dict, gene_dict = load_VAR_SAMPLE_GENE_json_dict( USER_JSON_FOLDER )
+    gene_dict = gene_dict[gene_name]
     return( render_template( 'gene_page_DXcator.html',
                                 gene_name = gene_name,
                                 gene_dict = gene_dict
@@ -552,13 +569,15 @@ def gene_page( gene_name ):
 @project_required
 @login_required
 @server_valid_authentication_required
-@project_data_required
+# @project_data_required
 @update_known_variants_redis_DB
 def gene_result( ):
     '''
         this is the function to display all gene results
     '''
-    geneHTMLdict = diagnosticator_rendering_functions.get_all_genes_dict( )
+    USER_JSON_FOLDER = os.path.join( current_app.config['JSON_FOLDER'], current_user.server_username )
+    variant_dict, sample_dict, gene_dict = load_VAR_SAMPLE_GENE_json_dict( USER_JSON_FOLDER )
+    geneHTMLdict = diagnosticator_rendering_functions.get_all_genes_dict_JSON( gene_dict, variant_dict )
     return( render_template( 'gene_result_DXcator.html',
                                 geneHTMLdict = geneHTMLdict
                 ))

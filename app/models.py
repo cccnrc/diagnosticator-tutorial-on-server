@@ -38,6 +38,9 @@ class User( UserMixin, db.Model ):
     messages_received = db.relationship('Message',
                                         foreign_keys='Message.recipient_id',
                                         backref='recipient', lazy='dynamic')
+    project_samples = db.relationship('Sample',
+                                        foreign_keys='Sample.user_id',
+                                        backref='user', lazy='dynamic')
 
     def __repr__(self):
         return '<User {}>'.format(self.server_username)
@@ -120,3 +123,16 @@ class KnownVariants(db.Model):
     acmg_classification = db.Column(db.String(12))
     acmg_classification_num = db.Column(db.Integer)
     last_update = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+
+class Sample(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(400), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    variants = db.relationship('Variant',
+                                    foreign_keys='Variant.sample_id',
+                                    backref='variant', lazy='dynamic')
+
+class Variant(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(400), index=True)
+    sample_id = db.Column(db.Integer, db.ForeignKey('sample.id'))

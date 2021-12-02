@@ -15,6 +15,9 @@ import requests
 ####################################################################
 ############ this is to check central DB authentication ############
 ####################################################################
+import shutil
+import os
+
 @bp.route('/authenticate_on_server', methods=['GET', 'POST'])
 def authenticate_on_server( ):
     next = request.args.get('next')
@@ -29,6 +32,14 @@ def authenticate_on_server( ):
     form = InsertPasswordRequestForm()
     if form.validate_on_submit():
         if check_server_user( form.username.data, form.password.data ):
+            ### add the folder for the USER TUTORIAL if not existing yet
+            USER_JSON_FOLDER = os.path.join( current_app.config['JSON_FOLDER'], form.username.data )
+            if not os.path.exists( USER_JSON_FOLDER ):
+                os.mkdir( USER_JSON_FOLDER )
+                shutil.copy2( os.path.join(current_app.config['JSON_FOLDER'], 'var_dict.json'), USER_JSON_FOLDER )
+                shutil.copy2( os.path.join(current_app.config['JSON_FOLDER'], 'sample_dict.json'), USER_JSON_FOLDER )
+                shutil.copy2( os.path.join(current_app.config['JSON_FOLDER'], 'gene_dict.json'), USER_JSON_FOLDER )
+                flash( 'copied tutorial files in your folder!', 'success' )
             return redirect( next )
     text_dict = ({
             'title' : 'Authenticate on Central Website',

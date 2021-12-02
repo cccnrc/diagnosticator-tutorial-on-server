@@ -52,6 +52,31 @@
     border: 0px solid blue;
   }
 
+div#appear {
+  margin: 0;
+  margin-top: 10%;
+  margin-left: 10%;
+  text-align: center;
+  position: relative;
+  top: 50%;
+  font-size: 180%;
+  font-weight: bold;
+  color: red;
+}
+
+stream#local-app-message {
+  font-family: monospace;
+  font-weight: normal;
+  color: grey;
+  font-size: 80%;
+}
+
+a#local-app-link {
+  color: purple;
+  background: #f4f4f4;
+  text-decoration: underline;
+}
+
 </style>
 
 
@@ -92,7 +117,16 @@
       </ul>
     </div>
 
-
+    <div id="appear" class="vertical-center" style="display: none;">
+      This is the tutorial!<br>
+      You cannot upload file here<br><br>
+      <stream id="local-app-message">
+        Download and deploy the <a href="{{ SERVER_ADDRESS }}/installation" id="local-app-link" target="_blank">local-app</a> to analyze your files
+        <br>
+        <br>
+        We analyzed an example VCF for you, just go to <a href="{{ url_for( 'main.patient_result' ) }}" id="local-app-link">Result</a> section :)
+      </stream>
+    </div>
 
     <div style="text-align: center; margin-top: 10%;">
     <h1>Uploaded VCF</h1>
@@ -125,10 +159,8 @@
                   {{ file }}
               </td>
               <td class="ui-helper-center" style="border: collapse;" >
-                  <button type="button" class="btn btn-success">
-                    <a href="{{ url_for( 'main.filterVCF', filename=file ) }}" style="color: white;">
-                      analyze
-                    </a>
+                  <button type="button" class="btn btn-success" disabled>
+                    analyze
                   </button>
               </td>
           </tr>
@@ -145,7 +177,7 @@
     <h1>VCF Upload</h1>
     <form method="POST" action="{{ url_for('main.upload_files', filename=file) }}" enctype="multipart/form-data">
         <input type="file" name="file" style="margin-left: 43%; margin-top: 2%;">
-        <input type="submit" value="Submit" style="margin-top: 2%;" >
+        <input onclick="disableSubmit();showDiv();" type="submit" value="Submit" style="margin-top: 2%;" id="mySubmit">
     </form>
     </div>
 
@@ -165,6 +197,15 @@
           return false;
       };
   };
+
+  function disableSubmit() {
+    document.getElementById("mySubmit").disabled = true;
+  }
+
+  function showDiv() {
+     document.getElementById('appear').style.display = "block";
+  }
+
 </script>
 
 

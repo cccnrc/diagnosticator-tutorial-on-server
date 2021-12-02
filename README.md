@@ -1,54 +1,27 @@
-### FLASK LOCAL
+# ONLINE-ONLY TUTORIAL
+
+## this is intended to give any registered user the chance to try Diagnosticator before deploy it locally
+
+### to create the static files from the analyzed ones
 ```
-cd /home/enrico/columbia/diagnosticator-AWS/diagnosticator-local-simple-ALGORITHM-DEVELOPMENT-02-noMySQL-TUTORIAL-LABMEETING/
-# atom venv/bin/activate
+cd ${DXCATOR_DIR}
 source venv/bin/activate
-flask run
-```
 
-### GITHUB
-```
-atom .gitignore
-git init
-git add .
-git commit -m "diagnosticator local app - v0.0"
-git branch -M development
-git remote add origin https://github.com/cccnrc/diagnosticator-tutorial.git
-git push -u origin development
-```
+from convert_VCF_REDIS import VCF2REDIS
 
+ASILO_DIR = '/home/enrico/Downloads/diagnosticator-prove/analisi_result'
 
-### run DOCKERs
-```
-UPLOAD="$(pwd)/upload"
+var_dict, sample_dict, gene_dict = VCF2REDIS( ASILO_DIR )
 
-### DX-VEP: /home/enrico/columbia/diagnosticator-AWS/docker-VEP-alpine
-docker run --rm -d --name DX-VEP \
-  -v $UPLOAD:/home/VEP_INPUT \
-  alpine-vep:0.0 /bin/bash
+import json
+with open('/home/enrico/Downloads/diagnosticator-prove/var_dict.json', 'w') as fp:
+    json.dump(var_dict, fp)
 
-docker run --rm -d --name DX-ASILO \
-  -v $UPLOAD:/INPUT \
-  asilo:0.0 /bin/bash
+with open('/home/enrico/Downloads/diagnosticator-prove/sample_dict.json', 'w') as fp:
+    json.dump(sample_dict, fp)
 
-### to have REDIS as well
-docker run --name redis-01 --rm \
-            --dns 8.8.8.8 \
-            -d -p 6377:6379 redis:latest
-
-
-# redis-cli -p 6379
-
-### to have a RQ-WORKER as well
-source venv/bin/activate
-rq worker diagnosticator-tasks --url redis://127.0.0.1:6377
-
-
-
-docker stop DX-VEP DX-ASILO redis-01
-
-
-docker exec -it DX-VEP /bin/bash
+with open('/home/enrico/Downloads/diagnosticator-prove/gene_dict.json', 'w') as fp:
+    json.dump(gene_dict, fp)
 ```
 
 
@@ -58,19 +31,26 @@ docker exec -it DX-VEP /bin/bash
 
 
 
-```
-###################################
-####### build this docker #########
-###################################
-docker build --no-cache -t cccnrc/diagnosticator:0.11 .
-docker push cccnrc/diagnosticator:0.11
 
 
-################################
-####### DOCKER-COMPOSE #########
-################################
-docker-compose rm -v
-docker volume rm diagnosticator-local-app-00_DX-UPLOAD
-docker volume rm diagnosticator-local-app-00_DX-DB
-docker-compose up --build --force-recreate --renew-anon-volumes
-```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###ENDc

@@ -210,7 +210,7 @@
               {{ k }}
             </td>
             <!-- if gene name put link to gene page -->
-            {% if k == 'SYMBOL' %}
+            {% if k == 'genename' %}
               <td class="ui-helper-center">
                 <a href="{{ url_for('main.gene_page', gene_name = v) }}">
                   <button class="btn btn-basic" style="border: 1px solid #308eff;">

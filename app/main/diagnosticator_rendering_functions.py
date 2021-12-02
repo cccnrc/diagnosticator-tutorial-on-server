@@ -143,6 +143,19 @@ def getSampleVariants( sample_dict ):
     return( results_dict )
 
 
+def getSampleVariantsJSON( sample_dict, variant_dict ):
+    '''
+        this extracts variants characteristics for all variants in a specific sample
+        returning a dict K=var_name : V=chars
+    '''
+    results_dict = {}
+    for var_name in sample_dict[ 'varGT' ]:
+        var_dict = variant_dict[var_name]
+        var_dict = adaptVARdict( var_dict )
+        results_dict.update({ var_name : var_dict })
+    return( results_dict )
+
+
 def check_status_in_dict( d ):
     '''
         this allows to add NA as status in case it is not present in dict
@@ -261,6 +274,23 @@ def get_samples_VAR_status( variant_name, variant_dict ):
             sampleVARstatus = 'NA'
         sampleVARstatus_dict.update({ sample_name : sampleVARstatus })
     return( sampleVARstatus_dict )
+
+
+def get_samples_VAR_status_JSON( variant_name, variant_dict, samples_dict ):
+    '''
+        this functions retrieves the variant status of each specific sample from the mongoDB
+    '''
+    sampleVARstatus_dict = {}
+    for sample_name in variant_dict[ 'SAMPLES' ]:
+        sample_dict = samples_dict[sample_name]
+        try:
+            sampleVARstatus = sample_dict[ 'STATUS' ][ variant_name ]
+        except:
+            # print( "get_samples_VAR_status() WARNING: assigning default NA status to sample {0} for variant {1}".format( sample_name, variant_name ) )
+            sampleVARstatus = 'NA'
+        sampleVARstatus_dict.update({ sample_name : sampleVARstatus })
+    return( sampleVARstatus_dict )
+
 
 
 def removeKdict( k, d ):
@@ -457,6 +487,11 @@ def get_all_genes_dict():
     geneHTML_dict = extract_geneHTML_dict( genes_dict, variant_dict )
     return( geneHTML_dict )
 
+def get_all_genes_dict_JSON( gene_dict, variant_dict ):
+    # genes_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'gen' )
+    # variant_dict = redis_functions.redis_dict_return( url = current_app.config['REDIS_URL'], database = 2, key_prefix = 'var' )
+    geneHTML_dict = extract_geneHTML_dict( gene_dict, variant_dict )
+    return( geneHTML_dict )
 
 
 
